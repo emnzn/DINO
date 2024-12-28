@@ -1,7 +1,4 @@
-from typing import (
-    Dict,
-    List
-    )
+from typing import Dict, List
 
 import torch
 import numpy as np
@@ -17,11 +14,6 @@ from timm.models.vision_transformer import (
     vit_small_patch16_224,
     vit_base_patch16_224,
     vit_base_patch8_224
-    )
-
-from .schedulers import (
-    get_param_groups, 
-    cosine_scheduling
     )
 
 
@@ -271,6 +263,20 @@ class DINO(L.LightningModule):
         teacher_momentum: float
         ):
 
+        """
+        Updates the teacher using a moving average of the student's parameters.
+
+        Parameters
+        ----------
+        teacher: Encoder
+
+        student: Encoder
+
+        momentum: float
+            The momentum value between 0 - 1 where a higher value results in a 
+            lower sensitivity to new updates.
+        """
+
         for param_t, param_s in zip(teacher.parameters(), student.parameters()):
             param_t.data.mul_(teacher_momentum).add_((1 - teacher_momentum) * param_s.data)
 
@@ -349,9 +355,3 @@ def get_encoders(backbone: str) -> Encoder:
         param.requires_grad = False
 
     return student, teacher
-
-
-@torch.no_grad()
-def update_teacher(teacher, student, momentum):
-    for param_t, param_s in zip(teacher.parameters(), student.parameters()):
-        param_t.data.mul_(momentum).add_((1 - momentum) * param_s.data)
