@@ -167,8 +167,10 @@ class DINO(L.LightningModule):
 
     def training_step(self, batch, _) -> torch.Tensor:
         current_epoch = self.current_epoch
-        teacher_temp = self.teacher_temp_schedule[current_epoch]
+        iteration = self.global_step
+        optimizer = self.optimizers()
 
+        teacher_temp = self.teacher_temp_schedule[current_epoch]
         views = batch["image"]
         global_crops = views["global_crops"]
         local_crops = views["local_crops"]
@@ -190,7 +192,12 @@ class DINO(L.LightningModule):
             student_out = self.student(crop)
             student_outs[f"l{i}"] = student_out
 
-        gathered_teacher_outs = self.gather_teacher_outputs(teacher_outs)
+        for i, param_group in enumerate(optimizer.param_groups):
+            param_group["lr"] = self.lr_schedule[iteration]
+            if i == 0:
+                param_group["weight_decay"] = self.weight_decay_schedule[iteration]
+
+        gathered_teacher_outs = self.gathered_teacher_outs(teacher_outs)
 
         self.center = self.update_center(
             teacher_out=gathered_teacher_outs,
@@ -217,13 +224,16 @@ class DINO(L.LightningModule):
 
         return iteration_loss
 
-    def on_train_batch_start(self, batch, _):
-        pass
-
+    def on_train_batch_end(self, *_,):
+        teacher_momentum = self.teacher_momentum_schedule[self.global_step]
+        self.update_teacher(self.teacher, self.student, teacher_momentum)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.param_groups)
 
+        return optimizer
+
+    @torch.no_grad()
     def update_center(
         self,
         teacher_out: torch.Tensor,
@@ -236,6 +246,7 @@ class DINO(L.LightningModule):
         
         return center
     
+    @torch.no_grad()
     def gathered_teacher_outs(
         self, 
         teacher_outs: Dict[str, torch.Tensor]
@@ -251,6 +262,17 @@ class DINO(L.LightningModule):
             gathered_teacher_outs = torch.cat([v for _, v in teacher_outs.items()], dim=0).to("cpu")
 
         return gathered_teacher_outs
+    
+    @torch.no_grad()
+    def update_teacher(
+        self, 
+        teacher: Encoder, 
+        student: Encoder, 
+        teacher_momentum: float
+        ):
+
+        for param_t, param_s in zip(teacher.parameters(), student.parameters()):
+            param_t.data.mul_(teacher_momentum).add_((1 - teacher_momentum) * param_s.data)
 
 
 class ResNet50(nn.Module):
