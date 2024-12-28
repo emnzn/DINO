@@ -1,4 +1,10 @@
+from typing import (
+    Dict,
+    List
+    )
+
 import torch
+import numpy as np
 import torch.nn as nn
 import lightning as L
 import torch.optim as optim
@@ -11,6 +17,11 @@ from timm.models.vision_transformer import (
     vit_small_patch16_224,
     vit_base_patch16_224,
     vit_base_patch8_224
+    )
+
+from .schedulers import (
+    get_param_groups, 
+    cosine_scheduling
     )
 
 
@@ -87,28 +98,159 @@ class Encoder(nn.Module):
     
 
 class DINO(L.LightningModule):
+    """
+    A lightning implementation of DINO: self-distillation with no labels.
+
+    Parameters
+    ----------
+    student: Encoder
+        The initialized student encoder.
+
+    teacher: Encoder
+        The initialized teacher encoder.
+
+    lr_schedule: np.ndarray
+        An array consisting of the learning rate across each iteration step.
+        Adjusted with Cosine Scheduling.
+
+    teacher_temp_schedule: np.ndarray
+        An array consisting of the temperatures used to sharpen the teacher outputs across epochs.
+    
+    weight_decay_schedule: np.ndarray
+        An array consisting of the weight decay per iteration step.
+        Adjusted with Cosine Scheduling.
+
+    teacher_momentum_schedule: np.ndarray
+        An array consisting of the momentum used to update the teacher per iteration step.
+        Adjusted with Cosine Scheduling.
+
+    param_groups: Dict[List[torch.Tensor]]
+        The param groups for the optimizer.
+        Decouples normalization and bias parameters from regularizable parameters.
+
+    student_temp: float
+        The temperature applied to the outputs of the student.
+
+    center_momentum: float
+        The momentum used for centering.
+
+    k_dim: int
+        The output dimension of the encoder.
+    """
 
     def __init__(
         self,
-        encoder: Encoder,
-        learning_rate: float,
-        weight_decay: float,
-        eta_min: float,
-        temperature: float
+        student: Encoder,
+        teacher: Encoder,
+        lr_schedule: np.ndarray,
+        teacher_temp_schedule: np.ndarray,
+        weight_decay_schedule: np.ndarray,
+        teacher_momentum_schedule: np.ndarray,
+        param_groups: Dict[List[torch.Tensor]],
+        student_temp: float = 0.1,
+        center_momentum: float = 0.9,
+        k_dim: int = 65536
         ):
         super().__init__()
 
-        self.encoder = encoder
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
-        self.eta_min = eta_min
-        self.temperature = temperature
+        self.student = student
+        self.teacher = teacher
+        self.lr_schedule = lr_schedule
+        self.teacher_temp_schedule = teacher_temp_schedule
+        self.weight_decay_schedule = weight_decay_schedule
+        self.teacher_momentum_schedule = teacher_momentum_schedule
+        self.param_groups = param_groups
+        self.student_temp = student_temp
+        self.center_momentum = center_momentum
 
-    def training_step(self, batch, _):
+        self.center = torch.zeros(1, k_dim)
+
+    def training_step(self, batch, _) -> torch.Tensor:
+        current_epoch = self.current_epoch
+        teacher_temp = self.teacher_temp_schedule[current_epoch]
+
+        views = batch["image"]
+        global_crops = views["global_crops"]
+        local_crops = views["local_crops"]
+        
+        global_crop0 = global_crops[0]
+        global_crop1 = global_crops[1]
+
+        with torch.inference_mode():
+            teacher_outs = {
+                "g0": self.teacher(global_crop0),
+                "g1": self.teacher(global_crop1)
+            }
+
+        student_outs = {
+            "g0": self.student(global_crop0),
+            "g1": self.student(global_crop1)
+        }
+        for i, crop in enumerate(local_crops):
+            student_out = self.student(crop)
+            student_outs[f"l{i}"] = student_out
+
+        gathered_teacher_outs = self.gather_teacher_outputs(teacher_outs)
+
+        self.center = self.update_center(
+            teacher_out=gathered_teacher_outs,
+            center=self.center,
+            momentum=self.center_momentum
+        )
+
+        total_loss = 0
+        n_loss_terms = 0
+
+        for global_crop, teacher_out in teacher_outs.items():
+            teacher_out = F.softmax(((teacher_out - self.center) / teacher_temp), dim=-1)
+
+            for crop, student_out in student_outs.items():
+                if global_crop != crop:
+                    student_out = F.softmax((student_out / self.student_temp), dim=-1)
+
+                    loss = -torch.sum(teacher_out * torch.log(student_out), dim=-1)
+                    avg_loss = loss.mean()
+                    total_loss += avg_loss
+                    n_loss_terms += 1
+        
+        iteration_loss = total_loss / n_loss_terms
+
+        return iteration_loss
+
+    def on_train_batch_start(self, batch, _):
         pass
 
-    def configure_optimizers():
-        pass
+
+    def configure_optimizers(self):
+        optimizer = optim.AdamW(self.param_groups)
+
+    def update_center(
+        self,
+        teacher_out: torch.Tensor,
+        center: torch.Tensor,
+        momentum: float
+        ) -> torch.Tensor:
+        
+        center = momentum * center + (1 - momentum) * torch.mean(teacher_out, dim=0, keepdim=True)
+        center = center.to(self.device)
+        
+        return center
+    
+    def gathered_teacher_outs(
+        self, 
+        teacher_outs: Dict[str, torch.Tensor]
+        ) -> torch.Tensor:
+
+        if self.trainer.world_size > 1:
+            gathered_teacher_g0 = self.all_gather(teacher_outs["g0"]).to("cpu")
+            gathered_teacher_g1 = self.all_gather(teacher_outs["g1"]).to("cpu")
+
+            gathered_teacher_outs = torch.cat([gathered_teacher_g0, gathered_teacher_g1], dim=0)
+    
+        else:
+            gathered_teacher_outs = torch.cat([v for _, v in teacher_outs.items()], dim=0).to("cpu")
+
+        return gathered_teacher_outs
 
 
 class ResNet50(nn.Module):
@@ -172,3 +314,22 @@ def get_model(backbone: str) -> ResNet50 | VisionTransformer:
         model.head = nn.Identity()
 
     return model
+
+def get_encoders(backbone: str) -> Encoder:
+    """
+    Returns an initialized student and teacher network.
+    """
+    
+    student = Encoder(backbone)
+    
+    teacher = Encoder(backbone)
+    for param in teacher.parameters():
+        param.requires_grad = False
+
+    return student, teacher
+
+
+@torch.no_grad()
+def update_teacher(teacher, student, momentum):
+    for param_t, param_s in zip(teacher.parameters(), student.parameters()):
+        param_t.data.mul_(momentum).add_((1 - momentum) * param_s.data)
