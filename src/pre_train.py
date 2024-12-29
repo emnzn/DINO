@@ -1,12 +1,3 @@
-# momentum schedule = 0.996 - 1 from start to end epoch adjusted with cosing schedule
-# weight decay schedule = 0.04 to 0.4 from start to end epoch adjusted with cosing schedule
-# lr schedule = linear for 
-    # first 10 epochs from 0 to 0.0005 * batchsize / 256
-    # then from the base to 1.0e-6
-
-# temperature schedule = 0.04 to 0.07 for first 30 epochs then constant at 0.07.
-    # recommended to use constant 0.04 from repo.
-
 import os
 
 import torch
@@ -18,8 +9,6 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
     TQDMProgressBar
 )
-
-import matplotlib.pyplot as plt
 
 from utils import (
     get_args, 
@@ -41,11 +30,11 @@ def main():
     seed_everything(args["seed"], workers=True)
 
     logger = TensorBoardLogger("pre-train-runs", name=args["backbone"], version=args["experiment_num"])
-    log_dir = os.path.join("pre-train-runs", args["backbone"], f"experiment-{logger.version}")
+    log_dir = os.path.join("pre-train-runs", args["backbone"], f"version_{logger.version}")
     os.makedirs(log_dir, exist_ok=True)
     save_args(args, log_dir)
 
-    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "pre-train", f"experiment-{logger.version}")
+    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "pre-train", f"version_{logger.version}")
     os.makedirs(save_dir, exist_ok=True)
 
     pbar = TQDMProgressBar(leave=True)
@@ -118,9 +107,6 @@ def main():
     student = Encoder(**encoder_kwargs)
     teacher = Encoder(**encoder_kwargs)
 
-    for param in teacher.parameters():
-        param.requires_grad = False
-
     center_momentum = args["center_momentum"]
     param_groups = get_param_groups(student)
 
@@ -142,9 +128,9 @@ def main():
 
     trainer = L.Trainer(
         logger=logger,
-        devices=-1,
+        devices=1,
         strategy=strategy,
-        accelerator="auto",
+        accelerator="cpu",
         deterministic=True,
         precision=precision,
         max_epochs=args["epochs"],

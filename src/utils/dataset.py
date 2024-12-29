@@ -24,18 +24,19 @@ def get_dataset(
 
     augment = Augment(global_scale, local_scale, num_local_crops)
     
+    transform = BatchTransform(augment)
     dataset = load_dataset("ILSVRC/imagenet-1k", cache_dir=cache_dir, split=split)
-    dataset.set_transform(batch_transform(augment))
+    dataset.set_transform(transform)
 
     return dataset
 
-def batch_transform(augment):
-    def transform_fn(batch):
-        batch["image"] = [augment(img) for img in batch["image"]]
-        return batch
-    
-    return transform_fn
+class BatchTransform:
+    def __init__(self, augment):
+        self.augment = augment
 
+    def __call__(self, batch):
+        batch["image"] = [self.augment(img) for img in batch["image"]]
+        return batch
 
 class Augment:
     """

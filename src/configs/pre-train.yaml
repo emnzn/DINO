@@ -19,7 +19,7 @@ warmup_start_lr: 0.0
 final_lr: 1.0e-6
 
 # temperatures
-student_temp: 0.9
+student_temp: 0.1
 warmup_teacher_epochs: 0
 warmup_teacher_temp: 0.04
 final_teacher_temp: 0.04
@@ -32,7 +32,7 @@ local_scale_max: 0.4
 num_local_crops: 2
 
 # others
-batch_size: 8 #256
+batch_size: 512
 center_momentum: 0.9
 seed: 42
 epochs: 100

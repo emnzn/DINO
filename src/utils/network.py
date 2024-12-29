@@ -82,8 +82,8 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        x = F.normalize(x, p=2, dim=-1)
         x = self.mlp(x)
+        x = F.normalize(x, p=2, dim=-1)
         x = self.k_projection(x)
 
         return x
@@ -156,6 +156,9 @@ class DINO(L.LightningModule):
         self.center_momentum = center_momentum
 
         self.center = torch.zeros(1, k_dim, device=self.device)
+
+        self.teacher.requires_grad_(False)
+        self.teacher.eval()
 
     def training_step(self, batch, _) -> torch.Tensor:
         current_epoch = self.current_epoch
