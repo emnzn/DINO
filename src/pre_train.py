@@ -128,10 +128,9 @@ def main():
 
     trainer = L.Trainer(
         logger=logger,
-        devices=1,
+        devices=-1,
         strategy=strategy,
-        accelerator="cpu",
-        deterministic=True,
+        accelerator="auto",
         precision=precision,
         max_epochs=args["epochs"],
         callbacks=[checkpoint_callback, pbar]
