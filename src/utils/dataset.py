@@ -9,24 +9,32 @@ from PIL import Image, ImageFilter, ImageOps
 def get_dataset(
     cache_dir: str, 
     split: str,
-    global_scale: Tuple[float] = (0.4, 1.0),
-    local_scale: Tuple[float] = (0.05, 0.4),
+    global_scale_min: float = 0.4,
+    global_scale_max: float = 1.0,
+    local_scale_min: float = 0.05,
+    local_scale_max: float = 0.4,
     num_local_crops: int = 2
     ) -> Dataset:
     """
     Constructs the ImageNet dataset object for pre-training.
     """
 
+    global_scale = (global_scale_min, global_scale_max)
+    local_scale = (local_scale_min, local_scale_max)
+
     augment = Augment(global_scale, local_scale, num_local_crops)
     
     dataset = load_dataset("ILSVRC/imagenet-1k", cache_dir=cache_dir, split=split)
-    dataset.set_transform(lambda x: transform(x, augment))
+    dataset.set_transform(batch_transform(augment))
 
     return dataset
 
-def transform(batch, augment):
-    batch["image"] = [augment(img) for img in batch["image"]]
-    return batch
+def batch_transform(augment):
+    def transform_fn(batch):
+        batch["image"] = [augment(img) for img in batch["image"]]
+        return batch
+    
+    return transform_fn
 
 
 class Augment:

@@ -138,7 +138,7 @@ class DINO(L.LightningModule):
         teacher_temp_schedule: np.ndarray,
         weight_decay_schedule: np.ndarray,
         teacher_momentum_schedule: np.ndarray,
-        param_groups: Dict[List[torch.Tensor]],
+        param_groups: Dict[str, List[torch.Tensor]],
         student_temp: float = 0.1,
         center_momentum: float = 0.9,
         k_dim: int = 65536
@@ -155,7 +155,7 @@ class DINO(L.LightningModule):
         self.student_temp = student_temp
         self.center_momentum = center_momentum
 
-        self.center = torch.zeros(1, k_dim)
+        self.center = torch.zeros(1, k_dim, device=self.device)
 
     def training_step(self, batch, _) -> torch.Tensor:
         current_epoch = self.current_epoch
@@ -214,11 +214,23 @@ class DINO(L.LightningModule):
         
         iteration_loss = total_loss / n_loss_terms
 
+        # per step logging
+        self.log("Learning Rate", self.lr_schedule[iteration], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("Weight Decay", self.weight_decay_schedule[iteration], on_step=True, on_epoch=False, prog_bar=True)
+        self.log("Teacher Momentum", self.teacher_momentum_schedule[iteration], on_step=True, on_epoch=False, prog_bar=True)
+
+        # per epoch logging
+        self.log("Teacher Temmperature", teacher_temp, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("Loss", iteration_loss, on_step=False, on_epoch=True, prog_bar=True)
+
         return iteration_loss
 
     def on_train_batch_end(self, *_,):
         teacher_momentum = self.teacher_momentum_schedule[self.global_step]
         self.update_teacher(self.teacher, self.student, teacher_momentum)
+        
+        if torch.cuda.device_count() > 1:
+            self.synchronize_teacher()
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.param_groups)
@@ -279,6 +291,12 @@ class DINO(L.LightningModule):
 
         for param_t, param_s in zip(teacher.parameters(), student.parameters()):
             param_t.data.mul_(teacher_momentum).add_((1 - teacher_momentum) * param_s.data)
+
+    @torch.no_grad()
+    def synchronize_teacher(self):
+        for param in self.teacher.parameters():
+            torch.distributed.broadcast(param.data, src=0)
+
 
 
 class ResNet50(nn.Module):

@@ -5,7 +5,7 @@ import numpy as np
 
 from .network import Encoder
 
-def get_param_groups(encoder: Encoder) -> Dict[List[torch.Tensor]]:
+def get_param_groups(encoder: Encoder) -> Dict[str, List[torch.Tensor]]:
     """
     Creates parameter groups to decouple weight decay.
 
@@ -92,3 +92,47 @@ def cosine_scheduling(
     schedule = np.concatenate((warm_up, cosine))
 
     return schedule
+
+
+def get_teacher_temperatures(
+    epochs: int, 
+    num_warmup_epochs: int, 
+    base_value: float, 
+    final_value: float
+    ) -> np.ndarray:
+    """
+    Constructs the list of temperatures for the teacher according to the 
+    configured schedule.
+
+    Parameters
+    ----------
+    epochs: int
+        The total number of training epochs.
+
+    num_warmup_epochs: int
+        The number of warmup epochs.
+
+    base_value: float
+        The base temperature value.
+
+    final_value: float
+        The final temperature value.
+
+    Returns
+    -------
+    temperatures: np.ndarray
+        The array of temperatures per epoch.
+    """
+
+    if num_warmup_epochs > 0:
+        assert base_value != final_value, "start and end must be differemt when num_warmup_epochs > 0"
+
+    if num_warmup_epochs == 0:
+        assert base_value == final_value, "Start and end must be the same when num_warmup_epochs == 0"
+
+    warmup = np.linspace(start=base_value, stop=final_value, num=num_warmup_epochs)
+    remaining = np.ones(epochs - num_warmup_epochs) * final_value
+
+    temperatures = np.concatenate([warmup, remaining], axis=0)
+
+    return temperatures
