@@ -147,18 +147,32 @@ class DINO(L.LightningModule):
 
         self.student = student
         self.teacher = teacher
-        self.lr_schedule = lr_schedule
-        self.teacher_temp_schedule = teacher_temp_schedule
-        self.weight_decay_schedule = weight_decay_schedule
-        self.teacher_momentum_schedule = teacher_momentum_schedule
+
+        self.lr_schedule = torch.tensor(lr_schedule)
+        self.teacher_temp_schedule = torch.tensor(teacher_temp_schedule)
+        self.weight_decay_schedule = torch.tensor(weight_decay_schedule)
+        self.teacher_momentum_schedule = torch.tensor(teacher_momentum_schedule)
+
         self.param_groups = param_groups
         self.student_temp = student_temp
         self.center_momentum = center_momentum
 
-        self.center = torch.zeros(1, k_dim, device=self.device)
+        self.center = torch.zeros(1, k_dim)
 
         self.teacher.requires_grad_(False)
         self.teacher.eval()
+
+    def setup(self, stage=None):
+        device = self.device
+
+        self.lr_schedule = self.lr_schedule.to(device)
+        self.teacher_temp_schedule = self.teacher_temp_schedule.to(device)
+        self.weight_decay_schedule = self.weight_decay_schedule.to(device)
+        self.teacher_momentum_schedule = self.teacher_momentum_schedule.to(device)
+
+        self.student_temp = torch.tensor(self.student_temp).to(device)
+        self.center_momentum = torch.tensor(self.center_momentum).to(device)
+        self.center = self.center.to(device)
 
     def training_step(self, batch, _) -> torch.Tensor:
         current_epoch = self.current_epoch
@@ -249,7 +263,6 @@ class DINO(L.LightningModule):
         ) -> torch.Tensor:
         
         center = momentum * center + (1 - momentum) * torch.mean(teacher_out, dim=0, keepdim=True)
-        center = center.to(self.device)
         
         return center
     
@@ -260,13 +273,13 @@ class DINO(L.LightningModule):
         ) -> torch.Tensor:
 
         if self.trainer.world_size > 1:
-            gathered_teacher_g0 = self.all_gather(teacher_outs["g0"]).to("cpu")
-            gathered_teacher_g1 = self.all_gather(teacher_outs["g1"]).to("cpu")
+            gathered_teacher_g0 = self.all_gather(teacher_outs["g0"])
+            gathered_teacher_g1 = self.all_gather(teacher_outs["g1"])
 
             gathered_teacher_outs = torch.cat([gathered_teacher_g0, gathered_teacher_g1], dim=0)
     
         else:
-            gathered_teacher_outs = torch.cat([v for _, v in teacher_outs.items()], dim=0).to("cpu")
+            gathered_teacher_outs = torch.cat([v for _, v in teacher_outs.items()], dim=0)
 
         return gathered_teacher_outs
     
