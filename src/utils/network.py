@@ -148,10 +148,10 @@ class DINO(L.LightningModule):
         self.student = student
         self.teacher = teacher
 
-        self.lr_schedule = torch.tensor(lr_schedule)
-        self.teacher_temp_schedule = torch.tensor(teacher_temp_schedule)
-        self.weight_decay_schedule = torch.tensor(weight_decay_schedule)
-        self.teacher_momentum_schedule = torch.tensor(teacher_momentum_schedule)
+        self.lr_schedule = torch.tensor(lr_schedule, dtype=torch.float32)
+        self.teacher_temp_schedule = torch.tensor(teacher_temp_schedule, dtype=torch.float32)
+        self.weight_decay_schedule = torch.tensor(weight_decay_schedule, dtype=torch.float32)
+        self.teacher_momentum_schedule = torch.tensor(teacher_momentum_schedule, dtype=torch.float32)
 
         self.param_groups = param_groups
         self.student_temp = student_temp
@@ -275,6 +275,9 @@ class DINO(L.LightningModule):
         if self.trainer.world_size > 1:
             gathered_teacher_g0 = self.all_gather(teacher_outs["g0"])
             gathered_teacher_g1 = self.all_gather(teacher_outs["g1"])
+
+            gathered_teacher_g0 = gathered_teacher_g0.reshape(-1, gathered_teacher_g0.shape[-1])
+            gathered_teacher_g1 = gathered_teacher_g1.reshape(-1, gathered_teacher_g1.shape[-1])
 
             gathered_teacher_outs = torch.cat([gathered_teacher_g0, gathered_teacher_g1], dim=0)
     
