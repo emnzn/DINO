@@ -1,4 +1,5 @@
 import os
+from math import ceil
 
 import torch
 import lightning as L
@@ -66,13 +67,14 @@ def main():
         num_workers=os.cpu_count() // 4,
         batch_size=process_batch_size
     )
+    iters_per_epoch = ceil(len(pretrain_loader) / max(1, num_gpus))
 
     base_lr = get_base_lr(args["batch_size"])
     lr_schedule = cosine_scheduling(
         base_value=base_lr,
         final_value=args["final_lr"],
         epochs=args["epochs"],
-        iters_per_epoch=len(pretrain_loader) // max(1, num_gpus),
+        iters_per_epoch=iters_per_epoch,
         warmup_epochs=args["warmup_epochs_lr"],
         start_warmup_value=args["warmup_start_lr"]
         )
@@ -89,7 +91,7 @@ def main():
         base_value=args["base_weight_decay"],
         final_value=args["final_weight_decay"],
         epochs=args["epochs"],
-        iters_per_epoch=len(pretrain_loader) // max(1, num_gpus),
+        iters_per_epoch=iters_per_epoch,
         warmup_epochs=0
     )
 
@@ -97,7 +99,7 @@ def main():
         base_value=args["base_teacher_momentum"],
         final_value=args["final_teacher_momentum"],
         epochs=args["epochs"],
-        iters_per_epoch=len(pretrain_loader) // max(1, num_gpus),
+        iters_per_epoch=iters_per_epoch,
         warmup_epochs=0
     )
 

@@ -1,5 +1,7 @@
 data/
 .env
 *.sh
+*.log
+*.ckpt
 hparams*
 __pycache__/

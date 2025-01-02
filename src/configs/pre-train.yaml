@@ -29,10 +29,10 @@ global_scale_min: 0.4
 global_scale_max: 1.0
 local_scale_min: 0.05
 local_scale_max: 0.4
-num_local_crops: 2
+num_local_crops: 10
 
 # others
-batch_size: 512
+batch_size: 1024
 center_momentum: 0.9
 seed: 42
 epochs: 100

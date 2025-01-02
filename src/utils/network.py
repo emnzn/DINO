@@ -242,7 +242,7 @@ class DINO(L.LightningModule):
 
         return iteration_loss
 
-    def on_train_batch_end(self, *_,):
+    def on_train_batch_end(self, *_):
         teacher_momentum = self.teacher_momentum_schedule[self.global_step]
         self.update_teacher(self.teacher, self.student, teacher_momentum)
         
