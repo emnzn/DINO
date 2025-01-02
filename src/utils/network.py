@@ -237,13 +237,13 @@ class DINO(L.LightningModule):
         self.log("Teacher Momentum", self.teacher_momentum_schedule[iteration], on_step=True, on_epoch=False, prog_bar=True)
 
         # per epoch logging
-        self.log("Teacher Temperature", teacher_temp, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("Loss", iteration_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("Teacher Temperature", teacher_temp, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("Loss", iteration_loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         return iteration_loss
 
     def on_train_batch_end(self, *_):
-        teacher_momentum = self.teacher_momentum_schedule[self.global_step]
+        teacher_momentum = self.teacher_momentum_schedule[self.global_step - 1]
         self.update_teacher(self.teacher, self.student, teacher_momentum)
         
         if torch.cuda.device_count() > 1:
