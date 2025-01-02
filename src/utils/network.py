@@ -7,6 +7,7 @@ import lightning as L
 import torch.optim as optim
 import torch.nn.functional as F
 from torchvision.models import resnet50
+from sklearn.metrics import accuracy_score
 from torch.nn.utils.parametrizations import weight_norm
 from timm.models.vision_transformer import (
     VisionTransformer,
@@ -24,7 +25,10 @@ class Encoder(nn.Module):
     Parameters
     ----------
     backbone: str
-        Must be one of [`resnet50`, `vit-s-8`, `vit-s-16`, `vit-b-8`, `vit-b-16`]
+        Must be one of [`resnet50`, `vit-s-8`, `vit-s-16`, `vit-b-8`, `vit-b-16`].
+
+    mlp_layers: int
+        The number of layers in the MLP projection head.
 
     hidden_dim: int
         The hidden dimension of the MLP.
@@ -293,7 +297,6 @@ class DINO(L.LightningModule):
         student: Encoder, 
         teacher_momentum: float
         ):
-
         """
         Updates the teacher using a moving average of the student's parameters.
 
@@ -392,3 +395,121 @@ def get_encoders(backbone: str) -> Encoder:
         param.requires_grad = False
 
     return student, teacher
+
+
+class Classifier(L.LightningModule):
+    """
+    Constructs and initializes the classifier for fine-tuning and training.
+
+    Parameters
+    ----------
+    encoder: Encoder
+        The initialized encoder.
+
+    num_classes: int
+        The number of output classes.
+
+    embedding_dim: int
+        The dimension of the image embedding produced by the encoder.
+
+    learning_rate: float
+        The learning rate of the optimizer.
+
+    eta_min: float
+        The minimum value the learning rate decays to using CosineAnnealing.
+
+    weight_decay: float
+        The L2 regularization strength.
+    """
+
+    def __init__(
+        self, 
+        encoder: Encoder,
+        num_classes: int,
+        embedding_dim: int,
+        learning_rate: float,
+        eta_min: float,
+        weight_decay: float,
+        ):
+        super().__init__()
+        
+        self.learning_rate = learning_rate
+        self.eta_min = eta_min
+        self.weight_decay = weight_decay
+        
+        self.criterion = nn.CrossEntropyLoss()
+        self.criterion.eval()
+
+        self.encoder = encoder
+        self.encoder.requires_grad_(False)
+        self.encoder.eval()
+
+        self.fc = nn.Linear(embedding_dim, num_classes)
+
+    def forward(
+        self,
+        x: torch.Tensor
+        ):
+
+        h = self.encoder(x)
+        logits = self.fc(h)
+
+        return logits
+    
+    def _pred_and_eval(self, batch):
+        img = batch["image"]
+        target = batch["target"]
+
+        logits = self(img)
+        confidence = F.softmax(logits, dim=1)
+        pred = torch.argmax(confidence, dim=1)
+
+        loss = self.criterion(logits, target)
+        accuracy = accuracy_score(target.cpu(), pred.cpu())
+
+        return loss, accuracy
+    
+    def training_step(self, batch, _):
+        train_loss, train_accuracy = self._pred_and_eval(batch)
+        optimizer = self.trainer.optimizers[0]
+        lr = optimizer.param_groups[0]["lr"]
+
+        self.log("Train/Loss", train_loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("Train/Accuracy", train_accuracy, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("Learning Rate", lr, on_step=False, on_epoch=True, prog_bar=True)
+
+        metrics = {
+            "loss": train_loss,
+            "accuracy": train_accuracy
+        }
+
+        return metrics
+    
+    def validation_step(self, batch, _):
+        val_loss, val_accuracy = self._pred_and_eval(batch)
+
+        self.log("Validation/Loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("Validation/Accuracy", val_accuracy, on_step=False, on_epoch=True, prog_bar=True)
+
+        metrics = {
+            "loss": val_loss,
+            "accuracy": val_accuracy
+        }
+
+        return metrics
+    
+    def configure_optimizers(self):
+        params = list(self.encoder.parameters()) + list(self.fc.parameters())
+        optimizer = torch.optim.AdamW(params, lr=self.learning_rate, weight_decay=self.weight_decay)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.trainer.max_epochs, eta_min=self.eta_min)
+
+        config = {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": lr_scheduler,
+                "interval": "epoch",
+                "frequency": 1
+            }
+        }
+
+        return config

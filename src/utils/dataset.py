@@ -1,6 +1,7 @@
 import random
 from typing import Tuple
 
+import torch
 from torchvision import transforms
 from datasets import load_dataset, Dataset
 from PIL import Image, ImageFilter, ImageOps
@@ -13,10 +14,42 @@ def get_dataset(
     global_scale_max: float = 1.0,
     local_scale_min: float = 0.05,
     local_scale_max: float = 0.4,
-    num_local_crops: int = 2
+    num_local_crops: int = 2,
+    apply_augmentation: bool = True
     ) -> Dataset:
     """
     Constructs the ImageNet dataset object for pre-training.
+
+    Parameters
+    ----------
+    cache_dir: str
+        The dataset dir.
+
+    split: str
+        The ImageNet split.
+    
+    global_scale_min: float
+        The minimum global crop scale.
+
+    global_scale_max: float
+        The maximum global crop scale.
+
+    local_scale_min: float
+        The minimum local crop scale.
+
+    local_scale_max: float
+        The maximum local crop scale.
+
+    num_local_crops: int
+        The number of local crops for the teacher.
+
+    apply_augmentation: bool
+        Whether to apply DINO pre-training augmentations.
+
+    Returns
+    -------
+    dataset: Dataset
+        The initialized Dataset. 
     """
 
     global_scale = (global_scale_min, global_scale_max)
@@ -24,11 +57,17 @@ def get_dataset(
 
     augment = Augment(global_scale, local_scale, num_local_crops)
     
-    transform = BatchTransform(augment)
+    if apply_augmentation:
+        transform = BatchTransform(augment)
+
+    else:
+        transform = StandardTransform()
+
     dataset = load_dataset("ILSVRC/imagenet-1k", cache_dir=cache_dir, split=split)
     dataset.set_transform(transform)
 
     return dataset
+
 
 class BatchTransform:
     def __init__(self, augment):
@@ -37,6 +76,7 @@ class BatchTransform:
     def __call__(self, batch):
         batch["image"] = [self.augment(img) for img in batch["image"]]
         return batch
+
 
 class Augment:
     """
@@ -155,3 +195,19 @@ class Solarization(object):
             return ImageOps.solarize(img)
         else:
             return img
+        
+
+class StandardTransform:
+    def __init__(self):        
+        self.transform = transforms.Compose([
+            RGB(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+
+    def __call__(self, batch):
+        img = [self.transform(i) for i in batch["image"]]
+        target = torch.tensor(batch["label"])
+
+        return {"image": img, "target": target}
