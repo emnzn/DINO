@@ -62,3 +62,11 @@ def get_base_lr(batch_size: int) -> float:
     base_lr = 0.0005 * batch_size / 256
 
     return base_lr
+
+def get_encoder_args(run_dir: str):
+    args = get_args(run_dir)
+
+    encoder_keys = {"backbone", "mlp_layers", "hidden_dim", "bottleneck_dim", "k_dim"}
+    encoder_args = {k: v for k, v in args.items() if k in encoder_keys}
+
+    return encoder_args
