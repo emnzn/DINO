@@ -1,11 +1,16 @@
+import os
 import random
 from typing import Tuple
 
 import torch
 from torchvision import transforms
+from torch.utils.data import DataLoader
 from datasets import load_dataset, Dataset
 from PIL import Image, ImageFilter, ImageOps
+from torchvision.datasets import CIFAR10, CIFAR100
 
+# Pre-training Functions
+# ---------------------
 
 def get_dataset(
     cache_dir: str, 
@@ -61,7 +66,7 @@ def get_dataset(
         transform = BatchTransform(augment)
 
     else:
-        transform = StandardTransform()
+        transform = StandardImageNetTransform()
 
     dataset = load_dataset("ILSVRC/imagenet-1k", cache_dir=cache_dir, split=split)
     dataset.set_transform(transform)
@@ -197,13 +202,25 @@ class Solarization(object):
             return img
         
 
-class StandardTransform:
-    def __init__(self):        
-        self.transform = transforms.Compose([
+# Fine-tuning Functions
+# ---------------------
+
+def get_transforms():
+    transform = transforms.Compose([
             RGB(),
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+    
+    return transform
+
+
+class StandardImageNetTransform:
+    def __init__(self):        
+        self.transform = transforms.Compose([
+            RGB(),
+            get_transforms()
         ])
 
     def __call__(self, batch):
@@ -211,3 +228,50 @@ class StandardTransform:
         target = torch.tensor(batch["label"])
 
         return {"image": img, "target": target}
+
+    
+def get_finetune_datasets(
+        dataset: str, 
+        data_dir: str
+        ):
+    
+    valid_datasets = ["cifar-10", "cifar-100", "imagenet-1k"]
+
+    assert dataset in valid_datasets, f"dataset must be one of {valid_datasets}"
+
+    if dataset == "imagenet-1k":
+        train_dataset = get_dataset(cache_dir=data_dir, split="train", apply_augmentation=False)
+        val_dataset = get_dataset(data_dir, split="validation", apply_augmentation=False)
+        
+    else:
+        if dataset == "cifar-10":
+            train_dataset = CIFAR10(
+                data_dir, 
+                train=True, 
+                transform=get_transforms(), 
+                download=True
+                )
+            
+            val_dataset = CIFAR10(
+                data_dir, 
+                train=False, 
+                transform=get_transforms(), 
+                download=True
+                )
+    
+    if dataset == "cifar-100":
+        train_dataset = CIFAR100(
+            data_dir, 
+            train=True, 
+            transform=get_transforms(), 
+            download=True
+            )
+        
+        val_dataset = CIFAR100(
+            data_dir, 
+            train=False, 
+            transform=get_transforms(), 
+            download=True
+            )
+        
+    return train_dataset, val_dataset

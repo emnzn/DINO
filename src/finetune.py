@@ -15,6 +15,7 @@ from utils import (
     save_args,
     get_dataset,
     get_encoder_args,
+    get_finetune_datasets,
     Encoder,
     Classifier
     )
@@ -26,12 +27,12 @@ def main():
     args = get_args(arg_path)
     seed_everything(args["seed"], workers=True)
 
-    logger = TensorBoardLogger("finetune-runs", name=args["backbone"], version=args["experiment_num"])
-    log_dir = os.path.join("finetune-runs", args["backbone"], f"version_{logger.version}")
+    logger = TensorBoardLogger("finetune-runs", name=os.path.join(args["backbone"], args["dataset"]), version=args["experiment_num"])
+    log_dir = os.path.join("finetune-runs", args["backbone"], args["dataset"], f"version_{logger.version}")
     os.makedirs(log_dir, exist_ok=True)
     save_args(args, log_dir)
 
-    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", f"version_{logger.version}")
+    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"],  args["dataset"], "finetune", f"version_{logger.version}")
     os.makedirs(save_dir, exist_ok=True)
 
     pbar = TQDMProgressBar(leave=True)
@@ -45,7 +46,11 @@ def main():
         enable_version_counter=False
     )
 
-    train_dataset = get_dataset(data_dir, split="train", apply_augmentation=False)
+    train_dataset, val_dataset = get_finetune_datasets(
+        dataset=args["dataset"], 
+        data_dir=data_dir
+        )
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size = args["batch_size"],
@@ -54,7 +59,6 @@ def main():
         persistent_workers=True
     )
 
-    val_dataset = get_dataset(data_dir, split="validation", apply_augmentation=False)
     val_loader = DataLoader(
         val_dataset,
         batch_size = args["batch_size"],
@@ -82,11 +86,11 @@ def main():
 
     classifier = Classifier(
         encoder=encoder,
-        num_classes=args["num_classes"],
         embedding_dim=embedding_dim,
         learning_rate=args["lr"],
         eta_min=args["eta_min"],
-        weight_decay=args["weight_decay"]
+        weight_decay=args["weight_decay"],
+        dataset=args["dataset"]
     )
 
     trainer = L.Trainer(

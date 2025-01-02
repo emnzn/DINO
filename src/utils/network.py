@@ -425,17 +425,23 @@ class Classifier(L.LightningModule):
     def __init__(
         self, 
         encoder: Encoder,
-        num_classes: int,
         embedding_dim: int,
         learning_rate: float,
         eta_min: float,
         weight_decay: float,
+        dataset: str
         ):
         super().__init__()
+
+        dataset_map = {"cifar-10": 10, "cifar-100": 100, "imagenet-1k": 1000}
+
+        assert dataset in dataset_map.keys(), f"dataset must be one of {list(dataset_map.keys())}"
         
+        num_classes = dataset_map[dataset]
         self.learning_rate = learning_rate
         self.eta_min = eta_min
         self.weight_decay = weight_decay
+        self.dataset = dataset
         
         self.criterion = nn.CrossEntropyLoss()
         self.criterion.eval()
@@ -457,8 +463,12 @@ class Classifier(L.LightningModule):
         return logits
     
     def _pred_and_eval(self, batch):
-        img = batch["image"]
-        target = batch["target"]
+        if self.dataset == "imagenet-1k":
+            img = batch["image"]
+            target = batch["target"]
+
+        else:
+            img, target = batch
 
         logits = self(img)
         confidence = F.softmax(logits, dim=1)
