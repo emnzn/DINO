@@ -13,7 +13,6 @@ from lightning.pytorch.callbacks import (
 from utils import (
     get_args, 
     save_args,
-    get_dataset,
     get_encoder_args,
     get_finetune_datasets,
     Encoder,
