@@ -1,12 +1,14 @@
 import os
 import random
-from typing import Tuple
+from typing import Tuple, Dict
 
 import torch
 from torchvision import transforms
 from datasets import load_dataset, Dataset
 from PIL import Image, ImageFilter, ImageOps
 from torchvision.datasets import CIFAR10, CIFAR100
+
+from .class_map import CIFAR10_CLASSES, CIFAR100_CLASSES, IMAGENET_CLASSES
 
 # Pre-training Functions
 # ---------------------
@@ -274,3 +276,18 @@ def get_finetune_datasets(
             )
         
     return train_dataset, val_dataset
+
+# Misc Functions
+# ---------------------
+
+def get_label_map(dataset: str) -> Dict[int, str]:
+    if dataset == "cifar-10":
+        label_map = CIFAR10_CLASSES
+
+    if dataset == "cifar-100":
+        label_map = CIFAR100_CLASSES
+
+    if dataset == "imagenet-1k":
+        label_map = IMAGENET_CLASSES
+
+    return label_map
