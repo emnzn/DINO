@@ -40,6 +40,13 @@ This is repository is part of my broader goal to implement DINOv2 for building f
 pip install -r requirements.txt
 ```
 
+## ImageNet Download
+To download ImageNet-1k before pre-training, enter the `src` directory and run:
+
+```bash
+python get_imagenet.py
+```
+
 ## Pre-train Configuration
 Configure pre-training through `pre-train.yaml` found under the `src/configs` directory. The configuration used in my experiments is shown below:
 
@@ -102,11 +109,8 @@ dataset: cifar-10
 ```
 
 ## Training
-To pre-train and finetune the encoders, run the following:
+To pre-train and finetune the encoders, run the following from within the `src` directory:
 
-```bash
-cd src
-```
 ```bash
 # self-supervised pre-training
 python pre_train.py
@@ -117,7 +121,15 @@ python pre_train.py
 python finetune.py
 ```
 
+## Embedding Visualization
+
+### CIFAR-10 pre-trained with DINO
+
+<p align="center">
+    <img src="assets/embedding-visualization/vit-s-16/version_0/cifar-10-embeddings.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+</p>
+
 ### To-Do
 - [x] Implement DINO for self-supervised learning.
+- [x] Embedding visualization.
 - [ ] Linear probe evaluation.
-- [ ] Embedding visualization.
