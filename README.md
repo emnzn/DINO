@@ -9,7 +9,7 @@
 ## Overview
 This repository implements DINO (self-distillation without labels) using PyTorch Lightning.
 
-This is repository is part of my broader goal to implement DINOv2 for building foundation-level vision models.
+This repository is part of my broader goal to implement DINOv2 for building foundation-level vision models without the need for labels.
 
 ### Supported Tasks
 - **Self-supervised Pre-training**: Supports pre-training on the [ImageNet-1k dataset](https://huggingface.co/datasets/ILSVRC/imagenet-1k), available on Hugging Face.  
