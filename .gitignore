@@ -3,4 +3,5 @@ data/
 *.sh
 *.log
 hparams*
+notes.txt
 __pycache__/
