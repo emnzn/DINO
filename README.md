@@ -1,4 +1,4 @@
-# DINO: Self-distillation with no labels
+# DINO: Self-distillation with no labels 🦕
 
 <p align="center">
     <img src="assets/graphs/algorithm.png" alt="Pre-training Objective" style="border-radius: 8px; width: 95%;">
