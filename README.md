@@ -41,7 +41,12 @@ pip install -r requirements.txt
 ```
 
 ## ImageNet Download
-To download ImageNet-1k before pre-training, enter the `src` directory and run:
+To download ImageNet-1k before pre-training, create a `.env` file using .env.example as a template and enter your HuggingFace token.
+
+```dotenv
+HF_TOKEN=YOUR_HF_TOKEN
+```
+Once completed, enter the `src` directory and run:
 
 ```bash
 python get_imagenet.py
