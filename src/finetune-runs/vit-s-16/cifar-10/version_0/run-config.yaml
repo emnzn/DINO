@@ -1,6 +1,6 @@
 backbone: vit-s-16
 batch_size: 8
-dataset: imagenet-1k
+dataset: cifar-10
 epochs: 100
 eta_min: 1.0e-06
 experiment_num: 0

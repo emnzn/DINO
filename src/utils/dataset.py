@@ -4,7 +4,6 @@ from typing import Tuple
 
 import torch
 from torchvision import transforms
-from torch.utils.data import DataLoader
 from datasets import load_dataset, Dataset
 from PIL import Image, ImageFilter, ImageOps
 from torchvision.datasets import CIFAR10, CIFAR100

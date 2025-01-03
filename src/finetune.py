@@ -32,7 +32,7 @@ def main():
     os.makedirs(log_dir, exist_ok=True)
     save_args(args, log_dir)
 
-    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"],  args["dataset"], "finetune", f"version_{logger.version}")
+    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", args["dataset"], f"version_{logger.version}")
     os.makedirs(save_dir, exist_ok=True)
 
     pbar = TQDMProgressBar(leave=True)
