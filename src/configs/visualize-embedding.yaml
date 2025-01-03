@@ -1,0 +1,6 @@
+backbone: vit-s-16
+
+seed: 42
+batch_size: 8
+dataset: cifar-100
+experiment_num: 0
