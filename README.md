@@ -138,3 +138,4 @@ python finetune.py
 - [x] Implement DINO for self-supervised learning.
 - [x] Embedding visualization.
 - [ ] Linear probe evaluation.
+- [ ] Sync BatchNorm for Multi-GPU ResNet-50 pre-training.
