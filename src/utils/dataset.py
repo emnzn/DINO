@@ -207,6 +207,10 @@ class Solarization(object):
 # ---------------------
 
 def get_transforms():
+    """
+    Returns the standard transformations for downstream finetuning.
+    """
+
     transform = transforms.Compose([
             RGB(),
             transforms.Resize((224, 224)),
@@ -218,6 +222,12 @@ def get_transforms():
 
 
 class StandardImageNetTransform:
+    """
+    A callable class for transforming ImageNet-1k specifically as it uses
+    a different dataset class from CIFAR-10 and CIFAR-100 in this 
+    implementation.
+    """
+
     def __init__(self):        
         self.transform = transforms.Compose([
             RGB(),
@@ -232,9 +242,29 @@ class StandardImageNetTransform:
 
     
 def get_finetune_datasets(
-        dataset: str, 
-        data_dir: str
-        ):
+    dataset: str, 
+    data_dir: str
+    ) -> Tuple[Dataset | CIFAR10 | CIFAR100]:
+    """
+    Constructs datasets for finetuning.
+
+    Parameters
+    ----------
+    dataset: str
+        The dataset to use. 
+        Must be one of [`cifar-10`, `cifar-100`, `imagenet-1k`].
+
+    data_dir: str
+        The dataset directory.
+
+    Returns
+    -------
+    train_dataset: Dataset | CIFAR10 | CIFAR100
+        The train dataset.
+
+    val_dataset: Dataset | CIFAR10 | CIFAR100
+        The validation dataset.
+    """
     
     valid_datasets = ["cifar-10", "cifar-100", "imagenet-1k"]
 
@@ -281,6 +311,10 @@ def get_finetune_datasets(
 # ---------------------
 
 def get_label_map(dataset: str) -> Dict[int, str]:
+    """
+    Returns the mapping between index and label for `cifar-10`, `cifar-100`, and imagenet-1k`.
+    """
+
     if dataset == "cifar-10":
         label_map = CIFAR10_CLASSES
 

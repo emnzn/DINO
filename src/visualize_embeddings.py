@@ -6,7 +6,6 @@ import numpy as np
 from tqdm import tqdm
 import plotly.express as px
 from sklearn.manifold import TSNE
-from lightning import seed_everything
 from torch.utils.data import DataLoader
 
 from utils import (
@@ -67,8 +66,7 @@ def main():
     arg_path = os.path.join("..", "src", "configs", "visualize-embedding.yaml")
     args = get_args(arg_path)
 
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = "mps"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     save_dir = os.path.join("..", "assets", "embedding-visualization", args["backbone"], f"version_{args['experiment_num']}")
     os.makedirs(save_dir, exist_ok=True)
 

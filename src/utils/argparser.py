@@ -63,7 +63,21 @@ def get_base_lr(batch_size: int) -> float:
 
     return base_lr
 
-def get_encoder_args(run_dir: str):
+def get_encoder_args(run_dir: str) -> Dict[str, Union[str, int, float]]:
+    """
+    Extracts encoder-specific arguments from a completed run.
+
+    Parameters
+    ----------
+    run_dir: str
+        The run directory containing the run-config.yaml file.
+
+    Returns
+    -------
+    encoder_args: Dict[str, Union[str, int, float]]
+        The encoder-specific arguments.
+    """
+
     args = get_args(run_dir)
 
     encoder_keys = {"backbone", "mlp_layers", "hidden_dim", "bottleneck_dim", "k_dim"}
