@@ -229,10 +229,7 @@ class StandardImageNetTransform:
     """
 
     def __init__(self):        
-        self.transform = transforms.Compose([
-            RGB(),
-            get_transforms()
-        ])
+        self.transform = get_transforms()
 
     def __call__(self, batch):
         img = [self.transform(i) for i in batch["image"]]
