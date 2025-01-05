@@ -25,20 +25,20 @@ This repository is part of my broader goal to implement DINOv2 for building foun
 ## Multi-Head Attention Visualization
 
 <p align="center">
-    <img src="assets/attention-vis/vit-s-16/sample1.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/attention-vis/vit-s-16/version_0/sample1.png" alt="attention-vis" style="border-radius: 8px; width: 95%;">
 </p>
 <p align="center">
-    <img src="assets/attention-vis/vit-s-16/sample2.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/attention-vis/vit-s-16/version_0/sample2.png" alt="attention-vis" style="border-radius: 8px; width: 95%;">
 </p>
 <p align="center">
-    <img src="assets/attention-vis/vit-s-16/sample3.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/attention-vis/vit-s-16/version_0/sample3.png" alt="attention-vis" style="border-radius: 8px; width: 95%;">
 </p>
 <p align="center">
-    <img src="assets/attention-vis/vit-s-16/sample4.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/attention-vis/vit-s-16/version_0/sample4.png" alt="attention-vis" style="border-radius: 8px; width: 95%;">
 </p>
 
 <p align="center">
-    <img src="assets/attention-vis/vit-s-16/sample6.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/attention-vis/vit-s-16/version_0/sample6.png" alt="attention-vis" style="border-radius: 8px; width: 95%;">
 </p>
 
 
@@ -138,7 +138,7 @@ python finetune.py
 ### CIFAR-10 pre-trained with DINO
 
 <p align="center">
-    <img src="assets/embedding-visualization/vit-s-16/version_0/cifar-10-embeddings.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+    <img src="assets/embedding-visualization/vit-s-16/version_0/cifar-10-embeddings.png" alt="cifar-10 embeddings" style="border-radius: 8px; width: 95%;">
 </p>
 
 ### To-Do
