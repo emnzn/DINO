@@ -16,7 +16,14 @@ This repository is part of my broader goal to implement DINOv2 for building foun
 - **Fine-tuning**: For **ImageNet-1k**, **CIFAR-10**, and **CIFAR-100**.  
 - **Attention Visualization**: Multi-head attention visualization on images.
 
-## Results
+## Linear Probing Results
+| Dataset        | Loss   | Accuracy   |
+|----------------|--------|------------|
+| CIFAR-10       | 0.2640 | **90.09%** |
+| CIFAR-100      | 0.8897 | **74.34%** |
+
+## Multi-Head Attention Visualization
+
 <p align="center">
     <img src="assets/attention-vis/vit-s-16/sample1.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
 </p>
@@ -137,5 +144,8 @@ python finetune.py
 ### To-Do
 - [x] Implement DINO for self-supervised learning.
 - [x] Embedding visualization.
-- [ ] Linear probe evaluation.
+- [x] Linear probe evaluation for CIFAR datasets.
+- [ ] Linear probe evaluation for ImageNet dataset.
 - [ ] Sync BatchNorm for Multi-GPU ResNet-50 pre-training.
+- [ ] KNN evaluation on CIFAR datasets.
+- [ ] KNN evaluation on ImageNet dataset.
