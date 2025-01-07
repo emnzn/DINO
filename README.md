@@ -7,13 +7,13 @@
 **Source**: [*Emerging Properties in Self-Supervised Vision Transformers*](https://arxiv.org/abs/2104.14294).
 
 ## Overview
-This repository implements DINO (self-distillation without labels) using PyTorch Lightning.
+This repository implements DINO (self-distillation with no labels) using PyTorch Lightning.
 
 This repository is part of my broader goal to implement DINOv2 for building foundation-level vision models without the need for labels.
 
 ### Supported Tasks
 - **Self-supervised Pre-training**: Supports pre-training on the [ImageNet-1k dataset](https://huggingface.co/datasets/ILSVRC/imagenet-1k), available on Hugging Face.  
-- **Fine-tuning**: For **ImageNet-1k**, **CIFAR-10**, and **CIFAR-100**.  
+- **Linear Probing**: For **ImageNet-1k**, **CIFAR-10**, and **CIFAR-100**.  
 - **Attention Visualization**: Multi-head attention visualization on images.
 
 ## Linear Probing Results
@@ -21,6 +21,7 @@ This repository is part of my broader goal to implement DINOv2 for building foun
 |----------------|--------|------------|
 | CIFAR-10       | 0.2640 | **90.09%** |
 | CIFAR-100      | 0.8897 | **74.34%** |
+| ImageNet-1k    | 0.8897 | **71.25%** |
 
 ## Multi-Head Attention Visualization
 
@@ -104,7 +105,7 @@ epochs: 100
 experiment_num: 0
 ```
 
-## Finetune Configuration
+## Finetune Configuration (Linear Probe)
 Configure the finetuning script through `finetune.yaml` which is also found under the `src/configs` directory. The configuration used in my experiments is shown below:
 
 ```yaml
@@ -145,7 +146,8 @@ python finetune.py
 - [x] Implement DINO for self-supervised learning.
 - [x] Embedding visualization.
 - [x] Linear probe evaluation for CIFAR datasets.
-- [ ] Linear probe evaluation for ImageNet dataset.
+- [x] Linear probe evaluation for ImageNet dataset.
 - [ ] Sync BatchNorm for Multi-GPU ResNet-50 pre-training.
 - [ ] KNN evaluation on CIFAR datasets.
 - [ ] KNN evaluation on ImageNet dataset.
+- [ ] Full fine-tuning evaluation.
