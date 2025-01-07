@@ -1,0 +1,9 @@
+backbone: vit-s-16
+batch_size: 512
+dataset: imagenet-1k
+epochs: 100
+eta_min: 1.0e-06
+experiment_num: 1
+lr: 0.0001
+seed: 42
+weight_decay: 0.0
