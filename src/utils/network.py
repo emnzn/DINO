@@ -210,7 +210,7 @@ class DINO(L.LightningModule):
             if i == 0:
                 param_group["weight_decay"] = self.weight_decay_schedule[iteration]
 
-        gathered_teacher_outs = self.gathered_teacher_outs(teacher_outs)
+        gathered_teacher_outs = self.gather_teacher_outs(teacher_outs)
 
         self.center = self.update_center(
             teacher_out=gathered_teacher_outs,
@@ -271,7 +271,7 @@ class DINO(L.LightningModule):
         return center
     
     @torch.no_grad()
-    def gathered_teacher_outs(
+    def gather_teacher_outs(
         self, 
         teacher_outs: Dict[str, torch.Tensor]
         ) -> torch.Tensor:
